@@ -110,9 +110,6 @@ Contribuições são bem-vindas! Siga as etapas abaixo para contribuir com o pro
 Distribuído sob a licença MIT. Consulte LICENSE para mais informações.
 
 ## Referências
-
-### Referências
-
 Para obter mais informações sobre o Google Document AI OCR, consulte a documentação oficial:
 
 - [Visão geral do Document AI](https://cloud.google.com/document-ai?hl=pt-BR)
