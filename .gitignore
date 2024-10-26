@@ -24,3 +24,6 @@ build/
 
 # Ignorar cache
 .cache/
+
+# Ignorar pastas de upload
+uploads/
