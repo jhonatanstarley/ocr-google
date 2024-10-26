@@ -50,7 +50,8 @@ Antes de iniciar, certifique-se de ter os seguintes requisitos:
 
 ```GOOGLE_CLOUD_PROJECT_ID=seu_projeto_id
 GOOGLE_CLOUD_CREDENTIALS=config/chave.json
-PORT=3000```
+PORT=3000
+```
 
 3. Certifique-se de adicionar o arquivo chave.json (credenciais de serviço do Google Cloud) na pasta config/. Este arquivo não deve ser commitado no repositório, então certifique-se de que ele esteja incluído no .gitignore.
 
@@ -85,11 +86,11 @@ Exemplo de uso:
 ## Contribuição
 Contribuições são bem-vindas! Siga as etapas abaixo para contribuir com o projeto:
 
-Faça um fork do repositório.
-Crie uma nova branch com sua feature ou correção (```git checkout -b minha-feature```).
-Commit suas mudanças (```git commit -m 'Adiciona nova feature'```).
-Faça o push da branch (```git push origin minha-feature```).
-Abra um Pull Request.
+- Faça um fork do repositório.
+- Crie uma nova branch com sua feature ou correção (```git checkout -b minha-feature```).
+- Commit suas mudanças (```git commit -m 'Adiciona nova feature'```).
+- Faça o push da branch (```git push origin minha-feature```).
+- Abra um Pull Request.
 
 ## Licença
 Distribuído sob a licença MIT. Consulte LICENSE para mais informações.
