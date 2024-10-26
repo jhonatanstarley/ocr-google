@@ -13,7 +13,7 @@ Este projeto implementa um sistema de OCR (Reconhecimento Óptico de Caracteres)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Contribuição](#contribuição)
 - [Licença](#licença)
-
+- [Referências](#referencias)
 ---
 
 ## Sobre o Projeto
@@ -48,9 +48,20 @@ Antes de iniciar, certifique-se de ter os seguintes requisitos:
 
 2. Crie o arquivo .env na raiz do projeto e configure as variáveis de ambiente:
 
-```GOOGLE_CLOUD_PROJECT_ID=seu_projeto_id
-GOOGLE_CLOUD_CREDENTIALS=config/chave.json
+```# Porta na qual a aplicação será executada
 PORT=3000
+
+# ID do projeto no Google Cloud
+PROJECT_ID=xxxxxxxxxxxx
+
+# Localização do processador de Document AI
+LOCATION=us
+
+# ID do processador de Document AI
+PROCESSOR_ID=yyyyyyyyyyy
+
+# Caminho para o arquivo de credenciais do Google Cloud
+GOOGLE_APPLICATION_CREDENTIALS=./config/chave.json
 ```
 
 3. Certifique-se de adicionar o arquivo chave.json (credenciais de serviço do Google Cloud) na pasta config/. Este arquivo não deve ser commitado no repositório, então certifique-se de que ele esteja incluído no .gitignore.
@@ -97,6 +108,18 @@ Contribuições são bem-vindas! Siga as etapas abaixo para contribuir com o pro
 
 ## Licença
 Distribuído sob a licença MIT. Consulte LICENSE para mais informações.
+
+## Referências
+
+### Referências
+
+Para obter mais informações sobre o Google Document AI OCR, consulte a documentação oficial:
+
+- [Visão geral do Document AI](https://cloud.google.com/document-ai?hl=pt-BR)
+- [Documentação completa do Document AI](https://cloud.google.com/document-ai/docs)
+- [Configuração do Document AI](https://cloud.google.com/document-ai/docs/setup)
+- [OCR avançado de documentos empresariais](https://cloud.google.com/document-ai/docs/enterprise-document-ocr#ocr-processing)
+
 
 ## Contato
 Jhonatan Starley Coelho - jhonatanstarley@gmail.com
