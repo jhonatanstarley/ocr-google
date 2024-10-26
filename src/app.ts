@@ -44,6 +44,7 @@ const processDocumentREST = async (fileBuffer: Buffer, mimeType: string) => {
   const token = await getAccessToken();
 
   const requestBody = {
+    skipHumanReview: true,
     rawDocument: {
       content: fileBuffer.toString('base64'),
       mimeType: mimeType,
