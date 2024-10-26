@@ -26,4 +26,5 @@ build/
 .cache/
 
 # Ignorar pastas de upload
-uploads/
+uploads/*
+!uploads/.gitkeep
