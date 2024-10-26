@@ -64,6 +64,9 @@ Para iniciar o servidor, execute o comando:
 ```npm start```
 O servidor rodará na porta configurada no .env (padrão: 3000). Para acessar, abra um navegador e vá para http://localhost:3000.
 
+Para iniciar o servidor com log detalhados, execute o comando:
+```DEBUG=app npm start```
+
 Endpoints
 POST /upload - Endpoint para enviar um documento para OCR.
 
