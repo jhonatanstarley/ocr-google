@@ -13,7 +13,7 @@ Este projeto implementa um sistema de OCR (Reconhecimento Óptico de Caracteres)
 - [Estrutura do Projeto](#estrutura-do-projeto)
 - [Contribuição](#contribuição)
 - [Licença](#licença)
-- [Referências](#referencias)
+- [Referências](#referências)
 ---
 
 ## Sobre o Projeto
