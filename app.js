@@ -40,7 +40,12 @@ const processDocumentREST = async (fileBuffer, mimeType) => {
     rawDocument: {
       content: fileBuffer.toString('base64'),
       mimeType: mimeType, // Certifique-se de que está correto
-    },
+    }
+  };  
+
+  /* 
+  // Trecho removido do body.
+  ,
     processOptions: {
       ocrConfig: {
         enableImageQualityScores: false, // Avaliação de qualidade da imagem
@@ -60,7 +65,7 @@ const processDocumentREST = async (fileBuffer, mimeType) => {
       },
       entityTypes: ["Name", "Date", "Address"] // Entidades para extração
     }
-  };  
+  */
 
   debug('Enviando requisição para o Document AI API com o payload:', requestBody);
 
