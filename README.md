@@ -1,6 +1,6 @@
 # OCR-Google
 
-Este projeto implementa um sistema de OCR (Reconhecimento Óptico de Caracteres) utilizando a API do Google Document AI. É capaz de processar documentos de imagem, realizar OCR e extrair texto em português (pt-BR), com funcionalidades de configuração avançadas para adaptação ao tipo de documento.
+Este projeto implementa um sistema de OCR (Reconhecimento Óptico de Caracteres) utilizando a API do Google Document AI. É capaz de processar documentos de imagem, realizar OCR e extrair texto em português (pt-BR), com funcionalidades de configuração avançadas para adaptação ao tipo de documento. Sugestão: Siga a primeira e segunda etapa que não tem como dar errado, elas estão em referências.
 
 ## Índice
 
@@ -78,12 +78,36 @@ O servidor rodará na porta configurada no .env (padrão: 3000). Para acessar, a
 Para iniciar o servidor com log detalhados, execute o comando:
 ```DEBUG=app npm start```
 
-Endpoints
-POST /upload - Endpoint para enviar um documento para OCR.
+## Endpoints
 
-Exemplo de uso:
+### POST `/upload`
 
-```curl -X POST -F "file=@/caminho/para/imagem.jpg" http://localhost:3000/upload```
+Este endpoint permite o envio de um documento para processamento OCR com sanitização de dados.
+
+#### Parâmetros
+
+- **file** (requerido): O arquivo de imagem ou PDF a ser processado. Deve ter no máximo 20MB.
+- **documentType** (requerido): Tipo do documento a ser processado. Valores permitidos incluem:
+  - `"cin"`
+  - `"cnh-antiga"`
+  - `"cnh-nova"`
+  - `"rg-antigo"`
+  - `"rg-novo"`
+
+#### Exemplo de uso com `curl`
+
+```curl -X POST \
+     -F "file=@/caminho/para/imagem.jpg" \
+     -F "documentType=cnh-nova" \
+     http://localhost:3000/upload
+```
+## Exemplo de uso com Postman:
+ - Configure a requisição como POST e use o URL http://localhost:3000/upload.
+ - Na aba Body, selecione form-data.
+#### Adicione os seguintes campos:
+ - file: Escolha o arquivo desejado.
+ - documentType: Selecione o tipo de documento, como cnh-nova ou rg-antigo
+
 
 ## Estrutura do Projeto
 
@@ -112,11 +136,11 @@ Distribuído sob a licença MIT. Consulte LICENSE para mais informações.
 ## Referências
 Para obter mais informações sobre o Google Document AI OCR, consulte a documentação oficial:
 
-- [Visão geral do Document AI](https://cloud.google.com/document-ai?hl=pt-BR)
-- [Documentação completa do Document AI](https://cloud.google.com/document-ai/docs)
-- [Configuração do Document AI](https://cloud.google.com/document-ai/docs/setup)
-- [OCR avançado de documentos empresariais](https://cloud.google.com/document-ai/docs/enterprise-document-ocr#ocr-processing)
 
+- [Documentação do Document AI](https://cloud.google.com/document-ai/docs/setup)
+- [1ª Etapa Document AI](https://cloud.google.com/document-ai/docs/create-processor)
+- [2ª Etapa Document AI](https://cloud.google.com/document-ai/docs/process-documents-client-libraries)
+- [Visão geral do Document AI](https://cloud.google.com/document-ai?hl=pt-BR)
 
 ## Contato
 Jhonatan Starley Coelho - jhonatanstarley@gmail.com

@@ -1,0 +1,9 @@
+{
+    "fields": [
+      { "name": "Nome", "index": 7 },
+      { "name": "CPF", "index": 13, "split": true, "part": 0 },
+      { "name": "Filiação (Pai)", "index": 15 },
+      { "name": "Filiação (Mãe)", "index": [16, 17] }
+    ]
+}
+  

@@ -1,136 +1,175 @@
+//app.ts
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import multer from 'multer';
-import { readFileSync } from 'fs';
-import axios from 'axios';
+import { readFileSync, writeFileSync, unlink } from 'fs';
+import { DocumentProcessorServiceClient } from '@google-cloud/documentai';
 import path from 'path';
 import net from 'net';
-import { GoogleAuth } from 'google-auth-library';
 import morgan from 'morgan';
-import debug from 'debug';
+import log from 'loglevel';
+import { v4 as uuidv4 } from 'uuid';
 
 // Carrega as variáveis de ambiente
 dotenv.config();
 
-const log = debug('app');
-const app = express();
+// Configuração de logs
+const logLevels: log.LogLevelDesc[] = ['trace', 'debug', 'info', 'warn', 'error', 'silent'];
+const logLevel: log.LogLevelDesc = logLevels.includes(process.env.LOG_LEVEL as log.LogLevelDesc)
+  ? (process.env.LOG_LEVEL as log.LogLevelDesc)
+  : 'info';
+log.setLevel(logLevel);
 
-// Define o caminho absoluto para a pasta uploads na raiz do projeto
-const uploadDir = path.resolve(__dirname, '..', 'uploads');
-const upload = multer({ dest: uploadDir });
+const app = express();
+const uploadDir = path.resolve(__dirname, '../uploads');
+const ocrJsonDir = path.resolve(__dirname, '../ocr-json');
+const modelsDir = path.resolve(__dirname, '../models');
+const upload = multer({ 
+  dest: uploadDir, 
+  limits: { fileSize: 20 * 1024 * 1024 } // 20 MB
+});
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-// Configura morgan para logar todas as requisições HTTP
-app.use(morgan('combined'));
-
-// Verifica as variáveis de ambiente obrigatórias
+// Verificação e carregamento das variáveis de ambiente obrigatórias
 if (!process.env.PROJECT_ID || !process.env.LOCATION || !process.env.PROCESSOR_ID) {
-  log("Variáveis de ambiente faltando. Certifique-se de que PROJECT_ID, LOCATION e PROCESSOR_ID estão no arquivo .env.");
+  log.error("Variáveis de ambiente faltando. Certifique-se de que PROJECT_ID, LOCATION e PROCESSOR_ID estão no arquivo .env.");
   process.exit(1);
 } else {
-  log("Variáveis de ambiente carregadas com sucesso.");
+  log.info("Variáveis de ambiente carregadas com sucesso.");
 }
 
 // Configuração do caminho das credenciais
 process.env.GOOGLE_APPLICATION_CREDENTIALS = path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS!);
-log(`Caminho do arquivo de credenciais: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
+log.info(`Caminho do arquivo de credenciais: ${process.env.GOOGLE_APPLICATION_CREDENTIALS}`);
 
-// Função para processar documentos usando a API REST do Document AI
-const processDocumentREST = async (fileBuffer: Buffer, mimeType: string) => {
-  const endpoint = `https://${process.env.LOCATION}-documentai.googleapis.com/v1/projects/${process.env.PROJECT_ID}/locations/${process.env.LOCATION}/processors/${process.env.PROCESSOR_ID}:process`;
+// Configuração do cliente Document AI
+const client = new DocumentProcessorServiceClient({
+  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+});
 
-  log(`Endpoint de processamento de documento: ${endpoint}`);
+// Middleware para servir arquivos estáticos e logar requisições
+app.use(express.static(path.join(__dirname, '../public')));
+app.use(morgan('combined'));
 
-  const token = await getAccessToken();
-
-  const requestBody = {
-    skipHumanReview: true,
-    rawDocument: {
-      content: fileBuffer.toString('base64'),
-      mimeType: mimeType,
-    }
-  };
-
-  log('Enviando requisição para o Document AI API com o payload:', requestBody);
-
-  try {
-    const response = await axios.post(endpoint, requestBody, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    log('Resposta recebida do Document AI API:', response.data);
-    return response.data;
-  } catch (error: any) {
-    log('Erro ao processar o documento:', error.response ? JSON.stringify(error.response.data, null, 2) : error.message);
-    throw new Error('Falha ao processar o documento.');
-  }
-};
-
-// Função para obter o token de acesso usando a chave JSON diretamente
-const getAccessToken = async (): Promise<string> => {
-  const auth = new GoogleAuth({
-    keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS!,
-    scopes: ['https://www.googleapis.com/auth/cloud-platform']
-  });
-
-  log('Obtendo token de acesso para o Google Cloud API.');
-
-  const client = await auth.getClient();
-  const tokenResponse = await client.getAccessToken();
-
-  if (!tokenResponse.token) throw new Error('Token de acesso não obtido.');
-  log(`Token de acesso obtido: ${tokenResponse.token}`);
-  
-  return tokenResponse.token;
-};
-
-// Rota para servir o index.html
+// Rota para página inicial (index.html)
 app.get('/', (req: Request, res: Response) => {
-  log('Servindo a página index.html');
+  log.info('Servindo a página index.html');
   res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
-// Endpoint para receber logs do front-end
+// Rota para receber logs do front-end
 app.post('/log', express.json(), (req: Request, res: Response) => {
-  const logMessage = req.body.message;
-  log('Log do front-end:', logMessage);
+  const logMessage = req.body.message || "Nenhum log definido";
+  log.info('Log do front-end:', logMessage);
   res.status(200).send({ status: 'Log received' });
 });
 
-// Rota para upload e processamento
-app.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+// Função para processar o documento com Document AI
+const processDocument = async (fileBuffer: Buffer, mimeType: string) => {
+  const name = `projects/${process.env.PROJECT_ID}/locations/${process.env.LOCATION}/processors/${process.env.PROCESSOR_ID}`;
+  const request = {
+    name,
+    rawDocument: {
+      content: fileBuffer.toString('base64'),
+      mimeType,
+    },
+  };
+
+  log.debug('Enviando requisição para o Document AI API com o payload:', request);
+  log.info('Iniciando o processamento do documento com Document AI...');
+  log.debug(`Tipo de conteúdo: ${mimeType}`);
+  
   try {
-    if (!req.file) throw new Error("Arquivo não enviado.");
-    log('Recebendo arquivo para processamento:', req.file);
+    const [result] = await client.processDocument(request);
+    const { document } = result;
+
+    if (!document || !document.text) {
+      log.warn('Processamento concluído, mas o documento não contém texto extraído.');
+      throw new Error('Documento processado sem texto extraído.');
+    }
+
+    log.info('Processamento concluído com sucesso. Texto extraído.');
+    return document.text;
+  } catch (error) {
+    log.error('Erro ao processar documento com Document AI:', error);
+    throw new Error('Falha no processamento OCR');
+  }
+};
+
+// Função para aplicar o modelo de sanitização
+const sanitizeData = (text: string, model: any) => {
+  const lines = text.split('\n');
+  const structuredData = model.fields.map((field: any) => {
+    const value = Array.isArray(field.index)
+      ? field.index.map((idx: number) => lines[idx]).join(' ')
+      : lines[field.index];
+    return {
+      field: field.name,
+      input: field.split ? value.split(' ')[field.part] : value,
+    };
+  });
+  return { data: structuredData };
+};
+
+// Rota de upload e processamento com sanitização
+app.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
+  let filePath = ''; // Defina filePath no escopo da função para estar acessível no bloco catch
+  try {
+    if (!req.file || !req.body.documentType) throw new Error("Arquivo ou tipo de documento não enviado. Ou o arquivo excede o tamanho permitido.");
+    const documentType = req.body.documentType;
+    log.info(`Processando o documento tipo: ${documentType}`);
+
+    const modelPath = path.join(modelsDir, `${documentType}.json`);
+    const model = JSON.parse(readFileSync(modelPath, 'utf8'));
 
     const filePath = path.join(uploadDir, req.file.filename);
     const fileBuffer = readFileSync(filePath);
     const mimeType = req.file.mimetype;
 
-    log(`Arquivo recebido: ${filePath}, Tipo MIME: ${mimeType}`);
+    log.debug(`Arquivo lido do caminho: ${filePath}, Tipo MIME: ${mimeType}`);
 
-    const document = await processDocumentREST(fileBuffer, mimeType);
-    res.json(document);
+    const text = await processDocument(fileBuffer, mimeType);
+    const structuredData = sanitizeData(text, model);
+
+    const jsonFileName = `${uuidv4()}.json`;
+    const jsonFilePath = path.join(ocrJsonDir, jsonFileName);
+    writeFileSync(jsonFilePath, JSON.stringify(structuredData, null, 2));
+
+    // Retorna o texto original e o structuredData
+    res.json({ originalText: text, structuredData, jsonFile: jsonFileName });
+
+    // Se tudo der certo, chame deleteFile para limpar o arquivo
+    deleteFile(filePath);
   } catch (err: any) {
-    log('Erro ao processar a solicitação:', err);
+    log.error('Erro ao processar a solicitação:', err.message);
+    deleteFile(filePath); // Chama deleteFile em caso de erro também
     res.status(500).json({ error: err.message });
   }
 });
+
+// Função para excluir o arquivo com log de sucesso ou erro
+function deleteFile(filePath: string): void {
+  unlink(filePath, (err) => {
+    if (err) {
+      log.error(`Erro ao excluir o arquivo: ${filePath}`, err.message);
+    } else {
+      log.info(`Arquivo excluído com sucesso: ${filePath}`);
+    }
+  });
+}
 
 // Função para verificar se uma porta está em uso
 const checkPort = (port: number): Promise<boolean> => {
   return new Promise((resolve) => {
     const server = net.createServer()
       .once('error', () => {
-        log(`Porta ${port} está em uso.`);
-        resolve(false); // Porta em uso
+        log.warn(`Porta ${port} está em uso.`);
+        resolve(false); 
       })
       .once('listening', () => {
         server.close(() => {
-          log(`Porta ${port} está livre.`);
-          resolve(true); // Porta livre
+          log.info(`Porta ${port} está livre.`);
+          resolve(true);
         });
       })
       .listen(port);
@@ -142,10 +181,10 @@ const findFreePortAndStartServer = async (port: number): Promise<void> => {
   const isPortFree = await checkPort(port);
   if (isPortFree) {
     app.listen(port, () => {
-      log(`Servidor rodando na porta ${port}`);
+      log.info(`Servidor rodando na porta ${port}`);
     });
   } else {
-    log(`Tentando próxima porta: ${port + 1}`);
+    log.warn(`Tentando próxima porta: ${port + 1}`);
     findFreePortAndStartServer(port + 1);
   }
 };

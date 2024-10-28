@@ -1,0 +1,7 @@
+{
+    "skipHumanReview": true,
+    "rawDocument": {
+      "mimeType": "image/jpeg ou application/pdf (PDF, GIF, TIFF, JPEG, PNG, BMP, WEBP)",
+      "content": "CONTEUDO DO ARQUIVO CODIFICADO EM BASE64"
+    }
+  }

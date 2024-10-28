@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Document Processor</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
   <style>
     body {
-      background-color: #f8f9fa;
-      font-family: Arial, sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .container {
-      max-width: 600px;
+      max-width: 90%;
       margin-top: 50px;
       padding: 20px;
-      background-color: #fff;
       border-radius: 8px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     .btn-primary {
       background-color: #0062cc;
@@ -31,16 +31,48 @@
       text-align: center;
       margin-top: 20px;
     }
+    #jsonResult {
+      height: 200px;
+      background-color: #f8f9fa;
+      color: #333;
+      border-radius: 5px;
+      padding: 10px;
+      overflow-y: auto;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    #toggleThemeButton {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+    }
   </style>
 </head>
-<body>
-  <div class="container">
+<body class="bg-light text-dark">
+  <!-- Botão de alternância de tema -->
+  <button id="toggleThemeButton" class="btn btn-secondary">
+    <span id="themeIcon" class="bi bi-sun"></span>
+  </button>
+
+  <div class="container bg-light text-dark">
     <h2 class="text-center mb-4">Upload Document for AI Processing</h2>
     <form id="uploadForm">
       <div class="mb-3">
+        <label for="documentType" class="form-label">Select Document Type</label>
+        <select class="form-select" id="documentType" name="documentType" required>
+          <option value="" disabled selected>Escolha o documento</option>
+          <option value="cin">CIN</option>
+          <option value="cnh-antiga">CNH Antiga</option>
+          <option value="cnh-nova">CNH Nova</option>
+          <option value="rg-antigo">RG Antigo</option>
+          <option value="rg-novo">RG Novo</option>
+        </select>
+      </div>
+      <div class="mb-3">
         <label for="formFile" class="form-label">Choose file (PDF or Image)</label>
-        <input class="form-control" type="file" id="formFile" name="file" accept=".pdf, .png, .jpg, .jpeg" required>
-        <small class="form-text text-muted">Supported formats: PDF, PNG, JPG, JPEG</small>
+        <input class="form-control" type="file" id="formFile" name="file" accept=".pdf, .png, .jpg, .jpeg, .gif, .tiff, .bmp, .webp" required>
+        <small class="form-text text-muted">Supported formats: PDF, GIF, TIFF, JPEG, JPG, PNG, BMP, WEBP.</small>
+        <small class="form-text text-muted">Maximum file size is 20 MB</small>
       </div>
       <button type="submit" class="btn btn-primary w-100">Submit</button>
     </form>
@@ -52,7 +84,16 @@
 
     <div id="result" class="mt-4" style="display:none;">
       <h5>Processed Results</h5>
-      <pre id="jsonResult" class="bg-light p-3"></pre>
+      <div id="jsonResult"></div>
+      <table class="table table-bordered mt-4" id="structuredDataTable" style="display: none;">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
     
     <div id="error" class="alert alert-danger mt-4" style="display:none;">
@@ -61,33 +102,115 @@
   </div>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs/loader.min.js"></script>
   <script>
-    // Função para enviar logs para o back-end
-    function logToServer(message) {
-      console.log("Log enviado para o servidor:", message); // Log no console do navegador
-      $.post('/log', { message: message });
+    let currentTheme = 'light';
+
+    function toggleTheme() {
+      const body = document.body;
+      const container = document.querySelector('.container');
+      const jsonResult = document.getElementById('jsonResult');
+      const smallTexts = document.querySelectorAll('.form-text');
+      const table = document.getElementById('structuredDataTable');
+      
+      if (currentTheme === 'light') {
+        body.classList.replace('bg-light', 'bg-dark');
+        body.classList.replace('text-dark', 'text-light');
+
+        container.classList.replace('bg-light', 'bg-dark');
+        container.classList.replace('text-dark', 'text-light');
+
+        jsonResult.style.backgroundColor = '#333';
+        jsonResult.style.color = '#fff';
+
+        table.classList.add('table-dark');
+
+        smallTexts.forEach(text => text.classList.replace('text-muted', 'text-light'));
+
+        document.getElementById('themeIcon').className = 'bi bi-moon';
+        currentTheme = 'dark';
+      } else {
+        body.classList.replace('bg-dark', 'bg-light');
+        body.classList.replace('text-light', 'text-dark');
+
+        container.classList.replace('bg-dark', 'bg-light');
+        container.classList.replace('text-light', 'text-dark');
+
+        jsonResult.style.backgroundColor = '#f8f9fa';
+        jsonResult.style.color = '#333';
+
+        table.classList.remove('table-dark');
+
+        smallTexts.forEach(text => text.classList.replace('text-light', 'text-muted'));
+
+        document.getElementById('themeIcon').className = 'bi bi-sun';
+        currentTheme = 'light';
+      }
+    }
+    document.getElementById('toggleThemeButton').onclick = toggleTheme;
+
+    function loadMonacoEditor(content) {
+      require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.33.0/min/vs' } });
+      require(['vs/editor/editor.main'], function() {
+        monaco.editor.create(document.getElementById('jsonResult'), {
+          value: JSON.stringify({ text: content }, null, 2),
+          language: 'json',
+          theme: currentTheme === 'dark' ? 'vs-dark' : 'vs-light',
+          readOnly: true,
+          automaticLayout: true,
+          lineNumbers: "on",
+          wordWrap: 'on'
+        });
+      });
+    }
+
+    function displayStructuredData(data) {
+      const table = $('#structuredDataTable');
+      const tbody = table.find('tbody');
+      tbody.empty();
+
+      data.forEach(item => {
+        const row = `<tr>
+          <td>${item.field}</td>
+          <td><input type="text" class="form-control" value="${item.input}" readonly></td>
+        </tr>`;
+        tbody.append(row);
+      });
+
+      table.show();
     }
 
     $('#uploadForm').on('submit', function(e) {
       e.preventDefault();
-      logToServer("Formulário de upload enviado.");
       
       let formData = new FormData();
       const fileInput = $('#formFile')[0];
+      const documentType = $('#documentType').val();
+
+      // Verificação do tamanho do arquivo (20 MB)
+      const fileSize = fileInput.files[0].size / 1024 / 1024; // Tamanho em MB
+      if (fileSize > 20) {
+        alert("File size exceeds 20 MB. Please choose a smaller file.");
+        return;
+      }
+
+      if (documentType === "") {
+        alert("Please select a document type.");
+        return;
+      }
 
       if (fileInput.files.length === 0) {
         alert("Please upload a file!");
-        logToServer("Nenhum arquivo selecionado para upload.");
         return;
       }
 
       formData.append('file', fileInput.files[0]);
-      logToServer("Arquivo adicionado ao FormData.");
+      formData.append('documentType', documentType);
 
       $('#loading').show();
       $('#result').hide();
       $('#error').hide();
-      logToServer("Exibindo indicador de carregamento.");
+      $('#structuredDataTable').hide();
 
       $.ajax({
         url: '/upload',
@@ -98,14 +221,13 @@
         success: function(response) {
           $('#loading').hide();
           $('#result').show();
-          $('#jsonResult').text(JSON.stringify(response, null, 2));
-          logToServer("Processamento concluído com sucesso. Resposta recebida: " + JSON.stringify(response, null, 2));
+          loadMonacoEditor(response.originalText);
+          displayStructuredData(response.structuredData.data);
         },
         error: function(err) {
           $('#loading').hide();
           $('#error').show();
-          logToServer("Erro ao processar o documento: " + JSON.stringify(err, null, 2));
-          console.error("Erro:", err);
+          console.error(err);
         }
       });
     });

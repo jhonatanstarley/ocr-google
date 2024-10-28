@@ -28,3 +28,12 @@ build/
 # Ignorar pastas de upload
 uploads/*
 !uploads/.gitkeep
+
+# Ignorar os arquivos
+/src/appRest.ts
+
+# Ignorar pasta ocr-json onde contém os jsons dos arquivos convertidos.
+ocr-json/
+response/
+dist/appRest.js
+
